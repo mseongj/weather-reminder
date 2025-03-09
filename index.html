@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TODO App with HTMX</title>
+  <!-- <script src="static/htmx.min.js"></script> -->
+  <script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.js"></script>
+  
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    .todo {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    .completed {
+      text-decoration: line-through;
+      color: gray;
+    }
+    button {
+      margin-left: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>TODO List</h1>
+
+  <!-- Form to Create a New Todo -->
+  <form hx-post="https://opulent-space-giggle-qj5x9rgqxvc6xwx-8080.app.github.dev/todo" hx-target="#todo-list" hx-swap="beforeend">
+    <input type="text" name="title" placeholder="New Todo" required>
+    <button type="submit">Add</button>
+  </form>
+
+  <!-- List of Todos -->
+  <div id="todo-list" hx-get="https://opulent-space-giggle-qj5x9rgqxvc6xwx-8080.app.github.dev/todos" hx-trigger="load">
+    <!-- Existing Todos will be dynamically rendered here -->
+  </div>
+
+</body>
+</html>
