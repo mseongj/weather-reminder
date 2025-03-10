@@ -2,9 +2,9 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
-	"fmt"
 
 	"github.com/gorilla/mux"
 	"github.com/mseongj/ToDoList-w.golang/models"
@@ -32,10 +32,10 @@ func GetTodos(w http.ResponseWriter, r *http.Request) {
         fmt.Fprintf(w, `
         <div class="todo %s" id="todo-%d">
             <span>%s</span>
-            <button hx-put="https://opulent-space-giggle-qj5x9rgqxvc6xwx-8080.app.github.dev/todo/%d/toggle" 
+            <button hx-put="http://127.0.0.1:8080/todo/%d/toggle" 
                     hx-target="#todo-%d" 
                     hx-swap="outerHTML">%s</button>
-            <button hx-delete="https://opulent-space-giggle-qj5x9rgqxvc6xwx-8080.app.github.dev/todo/%d" hx-target="#todo-%d">Delete</button>
+            <button hx-delete="http://127.0.0.1:8080/todo/%d" hx-target="#todo-%d">Delete</button>
         </div>
     `, completedClass, todo.ID, todo.Title, todo.ID, todo.ID, completedText, todo.ID, todo.ID)
 	}
@@ -69,10 +69,10 @@ func ToggleTodo(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, `
 				<div class="todo %s" id="todo-%d">
 					<span>%s</span>
-					<button hx-put="https://opulent-space-giggle-qj5x9rgqxvc6xwx-8080.app.github.dev/todo/%d/toggle" 
+					<button hx-put="http://127.0.0.1:8080/todo/%d/toggle" 
 							hx-target="#todo-%d"
 							hx-swap="outerHTML">%s</button>
-					<button hx-delete="https://opulent-space-giggle-qj5x9rgqxvc6xwx-8080.app.github.dev/todo/%d" hx-target="#todo-%d">Delete</button>
+					<button hx-delete="http://127.0.0.1:8080/todo/%d" hx-target="#todo-%d">Delete</button>
 				</div>
 			`, completedClass, todos[i].ID, todos[i].Title, todos[i].ID, todos[i].ID, completedText, todos[i].ID, todos[i].ID)
 			return
@@ -156,7 +156,7 @@ func CreateTodo(w http.ResponseWriter, r *http.Request) {
     <div class="todo" id="todo-%d">
         <span>%s</span>
         <span>%s</span>
-        <button hx-delete="https://opulent-space-giggle-qj5x9rgqxvc6xwx-8080.app.github.dev/todo/%d" hx-target="#todo-%d">Delete</button>
+        <button hx-delete="http://127.0.0.1:8080/todo/%d" hx-target="#todo-%d">Delete</button>
     </div>`, todo.ID, todo.Title, completedText, todo.ID, todo.ID)
 
     w.Header().Set("Content-Type", "text/html")
@@ -190,7 +190,7 @@ func UpdateTodo(w http.ResponseWriter, r *http.Request) {
                 <div class="todo" id="todo-%d">
                     <span>%s</span>
                     <span>%s</span>
-                    <button hx-delete="https://opulent-space-giggle-qj5x9rgqxvc6xwx-8080.app.github.dev/todo/%d" hx-target="#todo-%d">Delete</button>
+                    <button hx-delete="http://127.0.0.1:8080/todo/%d" hx-target="#todo-%d">Delete</button>
                 </div>
             `, todos[i].ID, todos[i].Title, completedText, todos[i].ID, todos[i].ID)
             return
@@ -199,10 +199,3 @@ func UpdateTodo(w http.ResponseWriter, r *http.Request) {
 
     http.Error(w, "Todo not found", http.StatusNotFound)
 }
-
-// https://opulent-space-giggle-qj5x9rgqxvc6xwx-8080.app.github.dev/
-
-// echo $GITHUB_TOKEN ghu_y39GBEQ7n3CtcwRbovxiFJQbFy6TpY1EaUBJ
-
-// curl https://opulent-space-giggle-qj5x9rgqxvc6xwx-8080.app.github.dev/ -H "X-Github-Token: ghu_y39GBEQ7n3CtcwRbovxiFJQbFy6TpY1EaUBJ"
-
