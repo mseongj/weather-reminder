@@ -1,4 +1,4 @@
-module github.com/mseongj/ToDoList-w.golang
+module github.com/mseongj/weather-reminder
 
 go 1.23.4
 

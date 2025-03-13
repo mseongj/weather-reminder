@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/mseongj/ToDoList-w.golang/routes"
+	"github.com/mseongj/weather-reminder/routes"
 )
 
 // CORS 미들웨어

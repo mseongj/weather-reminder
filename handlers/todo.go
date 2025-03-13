@@ -7,7 +7,7 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
-	"github.com/mseongj/ToDoList-w.golang/models"
+	"github.com/mseongj/weather-reminder/models"
 )
 
 var todos = []models.Todo{

@@ -2,7 +2,7 @@ package routes
 
 import (
 	"github.com/gorilla/mux"
-	"github.com/mseongj/ToDoList-w.golang/handlers"
+	"github.com/mseongj/weather-reminder/handlers"
 )
 
 func SetupRoutes() *mux.Router {
