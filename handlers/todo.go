@@ -3,12 +3,18 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
+	"os"
 	"strconv"
+	"sync"
 
 	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
 	"github.com/mseongj/weather-reminder/models"
 )
+
+var loadEnvOnce sync.Once
 
 var todos = []models.Todo{
 	{ID: 1, Title: "Learn Go", Completed: true},
@@ -16,6 +22,34 @@ var todos = []models.Todo{
 	{ID: 3, Title: "Build Frontend", Completed: false},
 	{ID: 4, Title: "Build Fullstack App", Completed: false},
 }
+
+func getAPIKEY() string {
+	// .env 파일을 한 번만 로드하도록 sync.Once 사용
+	loadEnvOnce.Do(func() {
+			if err := godotenv.Load(".env"); err != nil {
+					log.Fatal("Error loading .env file")
+			}
+	})
+
+	apiKey := os.Getenv("API_KEY")
+
+	return apiKey
+}
+
+// func GetAPIKEY() string {
+// 	// .env 파일 로드
+// 	err := godotenv.Load(".env")
+// 	if err != nil {
+// 			log.Fatal("Error loading .env file")
+// 	}
+
+// 	// 환경 변수에서 API 키 가져오기
+// 	apiKey := os.Getenv("API_KEY")
+
+// 	// API 키 출력 (테스트용)
+// 	// fmt.Println("API Key:", apiKey)
+// 	return apiKey
+// }
 
 func GetTodos(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
