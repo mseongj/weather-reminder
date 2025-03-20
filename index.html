@@ -12,21 +12,15 @@
         font-family: Arial, sans-serif;
         margin: 20px;
       }
-      .todo {
+      #list {
         display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 10px;
-        padding: 10px;
-        border: 1px solid #ccc;
-        border-radius: 5px;
+        flex-direction: column;
+        gap: 10px;
       }
-      .completed {
-        text-decoration: line-through;
-        color: gray;
-      }
-      button {
-        margin-left: 10px;
+      .weather {
+        background-color: lightslategray;
+        border: 1px solid black;
+        border-radius: 25%;
       }
     </style>
   </head>
@@ -44,7 +38,7 @@
     </form>
 
     <!-- List of Todos -->
-    <div id="todo-list" hx-get="http://127.0.0.1:8080/todos" hx-trigger="load">
+    <div id="list" hx-get="http://127.0.0.1:8080/getweathers" hx-trigger="load">
       <!-- Existing Todos will be dynamically rendered here -->
     </div>
   </body>

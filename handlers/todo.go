@@ -3,11 +3,13 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
@@ -36,20 +38,169 @@ func getAPIKEY() string {
 	return apiKey
 }
 
-// func GetAPIKEY() string {
-// 	// .env 파일 로드
-// 	err := godotenv.Load(".env")
-// 	if err != nil {
-// 			log.Fatal("Error loading .env file")
-// 	}
+func getDate() string {
+	now := time.Now()
+	return now.Format("20060102")
+}
+// 날씨 데이터를 받아오는 함수 (결과를 변수에 담아 리턴)
+func getWeatherData() ([]models.WeatherItemToReturn, error) {
 
-// 	// 환경 변수에서 API 키 가져오기
-// 	apiKey := os.Getenv("API_KEY")
+	apiUrl := fmt.Sprintf(
+			"http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?serviceKey=%s&pageNo=1&numOfRows=1000&dataType=JSON&base_date=%s&base_time=%s&nx=%d&ny=%d",
+			getAPIKEY(), getDate(), "1400", 60, 127,
+	)
 
-// 	// API 키 출력 (테스트용)
-// 	// fmt.Println("API Key:", apiKey)
-// 	return apiKey
-// }
+	resp, err := http.Get(apiUrl)
+	if err != nil {
+			return nil, fmt.Errorf("HTTP 요청 실패: %v", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+			return nil, fmt.Errorf("응답 본문 읽기 실패: %v", err)
+	}
+
+	var weatherResp models.WeatherResponse
+	if err := json.Unmarshal(body, &weatherResp); err != nil {
+			return nil, fmt.Errorf("JSON 파싱 실패: %v", err)
+	}
+
+	// 결과를 담을 슬라이스 생성
+	var result []models.WeatherItemToReturn
+
+	// 반복문으로 결과를 슬라이스에 추가
+	for _, item := range weatherResp.Response.Body.Items.Item {
+			result = append(result, models.WeatherItemToReturn{
+					Date:     item.FcstDate,
+					Time:     item.FcstTime,
+					Category: item.Category,
+					Value:    item.FcstValue,
+			})
+	}
+
+	return result, nil
+}
+// 카테고리 코드값 변환 함수
+func parseCategory(category, value string) string {
+	switch category {
+	case "SKY":
+		switch value {
+		case "1":
+			return "맑음"
+		case "3":
+			return "구름많음"
+		case "4":
+			return "흐림"
+		default:
+			return "알 수 없음"
+		}
+	case "PTY":
+		switch value {
+		case "0":
+			return "없음"
+		case "1":
+			return "비"
+		case "2":
+			return "비/눈"
+		case "3":
+			return "눈"
+		case "4":
+			return "소나기"
+		default:
+			return "알 수 없음"
+		}
+	default:
+		return value
+	}
+}
+
+func WeatherDataParse() ([]models.WeatherItem, error) {
+	rawData, err := getWeatherData()
+	// 에러처리
+	if err != nil {
+		fmt.Printf("getWeatherData()에서 error: %v", err)
+		return nil, err
+	}
+	// 결과가 비어있으면 실패 처리
+	if len(rawData) == 0 {
+		fmt.Printf("getWeatherData()가 비어있음.")
+		return nil, err
+	}
+
+	type tempWeather struct {
+		Sky      string
+		Pty      string
+		Tmp      string
+		Pop      string
+    Humidity string
+    }
+
+	grouped := make(map[string]*tempWeather)
+
+	for _, item := range rawData {
+        key := item.Date + item.Time
+
+        if _, exists := grouped[key]; !exists {
+            grouped[key] = &tempWeather{}
+        }
+
+        switch item.Category {
+        case "SKY":
+            grouped[key].Sky = parseCategory("SKY", item.Value)
+        case "PTY":
+            grouped[key].Pty = parseCategory("PTY", item.Value)
+        case "TMP":
+            grouped[key].Tmp = item.Value + "℃"
+        case "POP":
+            grouped[key].Pop = item.Value + "%"
+        case "REH":
+            grouped[key].Humidity = item.Value + "%"
+        }
+    }
+
+	var result []models.WeatherItem
+
+	for dateTime, weather := range grouped {
+        date := dateTime[:8]
+        time := dateTime[8:]
+        
+        result = append(result, models.WeatherItem{
+            Date:     date,
+            Time:     time,
+            Sky:      weather.Sky,
+            Pty:      weather.Pty,
+            Tmp:      weather.Tmp,
+            Pop:      weather.Pop,
+            Humidity: weather.Humidity,
+        })
+    }
+
+	return result, nil
+}
+
+func GetWeathers(w http.ResponseWriter, r *http.Request){
+	w.Header().Set("Content-Type", "text/html")
+	data, err := WeatherDataParse()
+	if err != nil {
+	    log.Fatal(err)
+  }
+
+	for _, item := range data {
+	    fmt.Fprintf(w, `
+			<div class="weather">
+            <p>날짜: %s</p>
+            <p>시간: %s</p>
+            <p>하늘 상태: %s</p>
+            <p>강수형태: %s</p>
+            <p>기온: %s</p>
+            <p>강수확률: %s</p>
+            <p>습도: %s</p>
+        </div>
+			`, item.Date, item.Time, item.Sky, item.Pty, item.Tmp, item.Pop, item.Humidity)
+    }
+}
+
 
 func GetTodos(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
