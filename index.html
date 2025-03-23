@@ -6,38 +6,47 @@
     <title>TODO App with HTMX</title>
     <!-- <script src="static/htmx.min.js"></script> -->
     <script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.js"></script>
-
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&family=Noto+Sans+KR:wght@100..900&display=swap"
+      rel="stylesheet"
+    />
     <style>
       body {
         font-family: Arial, sans-serif;
-        margin: 20px;
+        margin: 0;
+        background-color: black;
+        color: white;
       }
       #list {
         display: flex;
-        flex-direction: column;
+        flex-direction: row;
         gap: 10px;
+        margin-top: 10px;
       }
       .weather {
-        background-color: lightslategray;
+        display: block;
+        width: 100px;
         border: 1px solid black;
-        border-radius: 25%;
+        border-radius: 5%;
+      }
+      .weather p {
+        margin-top: 0;
+        margin-bottom: 0;
+        margin-left: 10px;
+        margin-right: 10px;
+        width: 110px;
+      }
+      .sky-status {
+        font-family: "Noto Color Emoji", sans-serif;
+        font-weight: 400;
+        font-style: normal;
+        color: unset;
       }
     </style>
   </head>
   <body>
-    <h1>TODO List</h1>
-
-    <!-- Form to Create a New Todo -->
-    <form
-      hx-post="http://127.0.0.1:8080/todo/todo"
-      hx-target="#todo-list"
-      hx-swap="beforeend"
-    >
-      <input type="text" name="title" placeholder="New Todo" required />
-      <button type="submit">Add</button>
-    </form>
-
-    <!-- List of Todos -->
     <div id="list" hx-get="http://127.0.0.1:8080/getweathers" hx-trigger="load">
       <!-- Existing Todos will be dynamically rendered here -->
     </div>
