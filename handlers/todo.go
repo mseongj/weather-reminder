@@ -88,7 +88,7 @@ func parseCategory(category, value string) string {
 	case "PTY":
 		switch value {
 		case "0":
-			return "없음"
+			return "none"
 		case "1":
 			return "🌧"
 		case "2":
@@ -181,18 +181,25 @@ func GetWeathers(w http.ResponseWriter, r *http.Request){
 		return result[i].Time < result[j].Time // 시간이 같으면 시간(Time) 기준 오름차순
 	})
 
+	var 강수형태 string
+
 	for _, item := range result {
-	    fmt.Fprintf(w, `
+		if item.Pty == "none" {
+			강수형태 = ""		
+		}else{
+			강수형태 = fmt.Sprintf("<p class='precipitation-status'>강수형태: %s</p>", item.Pty)
+		}
+	  fmt.Fprintf(w, `
 			<div class="weather">
             <p>날짜: %s</p>
             <p>시간: %s</p>
-            <p class="sky-status">%s</p>
+            %s
             <p class="precipitation-status">%s</p>
             <p>기온: %s</p>
             <p>강수확률: %s</p>
             <p>습도: %s</p>
-        </div>
-			`, item.Date, item.Time, item.Sky, item.Pty, item.Tmp, item.Pop, item.Humidity)
-    }
+      </div>`,
+			item.Date, item.Time, item.Sky, 강수형태, item.Tmp, item.Pop, item.Humidity)
+  }
 }
 
