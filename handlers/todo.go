@@ -181,25 +181,41 @@ func GetWeathers(w http.ResponseWriter, r *http.Request){
 		return result[i].Time < result[j].Time // 시간이 같으면 시간(Time) 기준 오름차순
 	})
 
-	var 강수형태 string
-
+	// 🌟 날짜별로 데이터를 그룹화
+	groupedByDate := make(map[string][]models.WeatherItem)
 	for _, item := range result {
-		if item.Pty == "none" {
-			강수형태 = ""		
-		}else{
-			강수형태 = fmt.Sprintf("<p class='precipitation-status'>강수형태: %s</p>", item.Pty)
+		groupedByDate[item.Date] = append(groupedByDate[item.Date], item)
+	}
+	
+	// 🌟 그룹화된 날짜를 정렬하기 위해 키를 슬라이스로 추출
+	var sortedDates []string
+	for date := range groupedByDate {
+		sortedDates = append(sortedDates, date)
+	}
+	sort.Strings(sortedDates) // 날짜를 오름차순으로 정렬
+
+	for _, date := range sortedDates { // 정렬된 날짜 순서대로 출력
+		items := groupedByDate[date]
+		fmt.Fprintf(w, `<div class="date-group"><h2>날짜: %s</h2>`, date)
+		for _, item := range items {
+			var 강수형태 string
+			if item.Pty == "none" {
+				강수형태 = ""
+			} else {
+				강수형태 = fmt.Sprintf("<p class='precipitation-status'>강수형태: %s</p>", item.Pty)
+			}
+			fmt.Fprintf(w, `
+				<div class="weather">
+					<p>시간: %s</p>
+					<p class="sky-status">%s</p>
+					%s
+					<p>기온: %s</p>
+					<p>강수확률: %s</p>
+					<p>습도: %s</p>
+				</div>`,
+				item.Time, item.Sky, 강수형태, item.Tmp, item.Pop, item.Humidity)
 		}
-	  fmt.Fprintf(w, `
-			<div class="weather">
-            <p>날짜: %s</p>
-            <p>시간: %s</p>
-            %s
-            <p class="precipitation-status">%s</p>
-            <p>기온: %s</p>
-            <p>강수확률: %s</p>
-            <p>습도: %s</p>
-      </div>`,
-			item.Date, item.Time, item.Sky, 강수형태, item.Tmp, item.Pop, item.Humidity)
-  }
+		fmt.Fprintf(w, "</div>")
+	}
 }
 
