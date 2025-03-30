@@ -1,64 +1,116 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TODO App with HTMX</title>
-    <!-- <script src="static/htmx.min.js"></script> -->
+    <title>날씨 정보</title>
     <script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@100..900&display=swap"
+      rel="stylesheet"
+    />
     <link
       href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&family=Noto+Sans+KR:wght@100..900&display=swap"
       rel="stylesheet"
     />
     <style>
       body {
-        font-family: Arial, sans-serif;
+        font-family: "Noto Sans KR", sans-serif;
         margin: 0;
-        background-color: black;
-        color: white;
+        background-color: #f5f5f5;
+        color: #333;
+        text-align: center;
       }
-      #list {
+      .container {
+        max-width: 105%;
+        margin: auto;
+        padding: 20px;
+      }
+      .headder {
+        width: 100%;
+        height: 40px;
         display: flex;
-        flex-direction: row;
-        gap: 10px;
-        margin-top: 10px;
+        justify-content: space-between;
       }
-      .date-group {
-        margin-bottom: 20px;
+      .weather-container {
+        display: flex;
+        justify-content: space-around;
+        flex-wrap: wrap;
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
       }
-      .weather {
-        display: block;
+      .weather-box {
         width: 100px;
-        border: 1px solid black;
-        border-radius: 5%;
-        border: 1px solid #ddd;
+        text-align: center;
         padding: 10px;
-        margin-bottom: 10px;
+      }
+      .weather-icon {
+        font-size: 36px;
       }
       .weather p {
-        margin-top: 0;
-        margin-bottom: 0;
-        margin-left: 10px;
-        margin-right: 10px;
         width: 110px;
+      }
+      .date-group {
+        display: flex;
+        flex-direction: row;
+        width: 95%;
+        justify-content: center;
+      }
+      .date-group:first-child {
+        background-color: #c7c7c7;
+        border-radius: 8px;
+      }
+      .temp {
+        font-size: 18px;
+        font-weight: bold;
+      }
+      .rain-chance {
+        font-size: 14px;
+        color: blue;
       }
       .sky-status {
         font-family: "Noto Color Emoji", sans-serif;
-        font-size: 24px;
-        font-weight: 400;
-        font-style: normal;
-        color: unset;
+        font-size: 40px;
+        margin-top: 10px;
+        margin-bottom: 10px;
       }
-      .precipitation-status {
-        color: blue;
+      .date-group:nth-of-type(n + 2) .weather:nth-child(even) {
+        display: none;
+      }
+      .time {
+        margin: 0;
       }
     </style>
   </head>
   <body>
-    <div id="list" hx-get="http://127.0.0.1:8080/getweathers" hx-trigger="load">
-      <!-- Existing Todos will be dynamically rendered here -->
+    <div class="headder">
+      <h2 style="margin: 0">현재 시간: <span id="current-time"></span></h2>
+      <h3 style="margin: 0">날짜: <span id="current-date"></span></h3>
     </div>
+    <div class="container">
+      <div
+        class="weather-container"
+        id="weather-list"
+        hx-get="http://127.0.0.1:8080/getweathers"
+        hx-trigger="load"
+      >
+        <!-- 날씨 정보가 여기에 로드됨 -->
+      </div>
+    </div>
+    <script>
+      function updateTime() {
+        const now = new Date();
+        document.getElementById("current-time").textContent =
+          now.toLocaleTimeString();
+        document.getElementById("current-date").textContent =
+          now.toLocaleDateString();
+      }
+      setInterval(updateTime, 1000);
+      updateTime();
+    </script>
   </body>
 </html>

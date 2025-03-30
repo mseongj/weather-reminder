@@ -196,7 +196,7 @@ func GetWeathers(w http.ResponseWriter, r *http.Request){
 
 	for _, date := range sortedDates { // 정렬된 날짜 순서대로 출력
 		items := groupedByDate[date]
-		fmt.Fprintf(w, `<div class="date-group"><h2>날짜: %s</h2>`, date)
+		fmt.Fprintf(w, `<div class="date-group">`)
 		for _, item := range items {
 			var 강수형태 string
 			if item.Pty == "none" {
@@ -206,14 +206,14 @@ func GetWeathers(w http.ResponseWriter, r *http.Request){
 			}
 			fmt.Fprintf(w, `
 				<div class="weather">
-					<p>시간: %s</p>
 					<p class="sky-status">%s</p>
 					%s
-					<p>기온: %s</p>
-					<p>강수확률: %s</p>
-					<p>습도: %s</p>
+					<p style="margin-bottom:0">기온: %s</p>
+					<p style="margin:5px 0 0 0">강수확률: %s</p>
+					<p style="margin: 0;">습도: %s</p>
+					<p class="time">%s</p>
 				</div>`,
-				item.Time, item.Sky, 강수형태, item.Tmp, item.Pop, item.Humidity)
+				item.Sky, 강수형태, item.Tmp, item.Pop, item.Humidity, item.Time)
 		}
 		fmt.Fprintf(w, "</div>")
 	}
