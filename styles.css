@@ -1,0 +1,90 @@
+body {
+  font-family: "Noto Sans KR", sans-serif;
+  margin: 0;
+  background-color: #f5f5f5;
+  color: #333;
+  text-align: center;
+  overflow-x: hidden;
+  overflow-y: hidden;
+}
+
+.container {
+  max-width: 105%;
+  margin: auto;
+  padding: 10px;
+}
+
+.headder {
+  height: 40px;
+  display: flex;
+  justify-content: space-between;
+  margin-left: 5px;
+  margin-right: 5px;
+  align-items: center;
+}
+
+.weather-container {
+  height: 86vh;
+  display: flex;
+  justify-content: space-around;
+  flex-wrap: wrap;
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.weather-box {
+  width: 100px;
+  text-align: center;
+  padding: 10px;
+}
+
+.weather-icon {
+  font-size: 36px;
+}
+
+.weather p {
+  width: 110px;
+}
+
+.date-group {
+  display: flex;
+  flex-direction: row;
+  width: 95%;
+  justify-content: center;
+}
+
+.date-group:first-child {
+  background-color: #f5f5f5;
+  border-radius: 8px;
+}
+
+.temp {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.rain-chance {
+  font-size: 14px;
+  color: blue;
+}
+
+.sky-status {
+  font-family: "Noto Color Emoji", sans-serif;
+  font-size: 40px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+.date-group:nth-of-type(n + 2) .weather:nth-child(even) {
+  display: none;
+}
+
+.time {
+  margin: 0;
+}
+
+.weather {
+  margin-bottom: 20px;
+}
