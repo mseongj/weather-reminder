@@ -39,7 +39,8 @@ func getDate() string {
 func getWeatherData() ([]models.WeatherItemToReturn, error) {
 	apiUrl := fmt.Sprintf(
 		"http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?serviceKey=%s&pageNo=1&numOfRows=1000&dataType=JSON&base_date=%s&base_time=%s&nx=%d&ny=%d",
-		getAPIKEY(), getDate(), "1400", 60, 127,
+		getAPIKEY(), getDate(), "1400", 77, 131, // 강원 홍천 화촌면 (77, 131)
+		// 대구 도원동 (88, 89)
 	)
 
 	resp, err := http.Get(apiUrl)
