@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"os"
 	"sort"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -16,6 +18,13 @@ import (
 )
 
 var loadEnvOnce sync.Once
+
+// 요청 처리 시간을 측정하기 위한 구조체
+type RequestMetrics struct {
+	StartTime time.Time
+	EndTime   time.Time
+	Duration  time.Duration
+}
 
 func getAPIKEY() string {
 	// .env 파일을 한 번만 로드하도록 sync.Once 사용
@@ -37,6 +46,11 @@ func getDate() string {
 // 날씨 데이터를 받아오는 함수 (결과를 변수에 담아 리턴)
 // 기존 getWeatherData 함수에 정렬 추가
 func getWeatherData() ([]models.WeatherItemToReturn, error) {
+	// 요청 시작 시간 기록
+	metrics := RequestMetrics{
+		StartTime: time.Now(),
+	}
+
 	apiUrl := fmt.Sprintf(
 		"http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?serviceKey=%s&pageNo=1&numOfRows=1000&dataType=JSON&base_date=%s&base_time=%s&nx=%d&ny=%d",
 		getAPIKEY(), getDate(), "1400", 77, 131, // 강원 홍천 화촌면 (77, 131)
@@ -49,6 +63,11 @@ func getWeatherData() ([]models.WeatherItemToReturn, error) {
 	}
 	defer resp.Body.Close()
 
+	// 응답 상태 코드 확인
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("API 응답 실패: 상태 코드 %d", resp.StatusCode)
+	}
+
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("응답 본문 읽기 실패: %v", err)
@@ -56,11 +75,17 @@ func getWeatherData() ([]models.WeatherItemToReturn, error) {
 
 	var weatherResp models.WeatherResponse
 	if err := json.Unmarshal(body, &weatherResp); err != nil {
+		// JSON 파싱 실패 시 응답 내용을 로그에 기록
+		log.Printf("JSON 파싱 실패. 응답 내용: %s", string(body))
 		return nil, fmt.Errorf("JSON 파싱 실패: %v", err)
 	}
 
-	var result []models.WeatherItemToReturn
+	// 응답이 비어있는지 확인
+	if len(weatherResp.Response.Body.Items.Item) == 0 {
+		return nil, fmt.Errorf("API 응답이 비어있습니다")
+	}
 
+	var result []models.WeatherItemToReturn
 	for _, item := range weatherResp.Response.Body.Items.Item {
 		result = append(result, models.WeatherItemToReturn{
 			Date:     item.FcstDate,
@@ -69,6 +94,11 @@ func getWeatherData() ([]models.WeatherItemToReturn, error) {
 			Value:    item.FcstValue,
 		})
 	}
+
+	// 요청 종료 시간 기록 및 로깅
+	metrics.EndTime = time.Now()
+	metrics.Duration = metrics.EndTime.Sub(metrics.StartTime)
+	log.Printf("날씨 데이터 요청 처리 시간: %v", metrics.Duration)
 
 	return result, nil
 }
@@ -170,53 +200,104 @@ func WeatherDataParse() ([]models.WeatherItem, error) {
 	return result, nil
 }
 
+// formatTime 함수 추가
+func formatTime(timeStr string) string {
+    hour := timeStr[:2]
+    return fmt.Sprintf("%s시", hour)
+}
+
+func getTempClass(tempStr string) string {
+	// 온도 문자열에서 숫자만 추출
+	tempStr = strings.TrimSuffix(tempStr, "℃")
+	temp, err := strconv.Atoi(tempStr)
+	if err != nil {
+		return "temp-cold"
+	}
+
+	// 온도에 따른 클래스 반환
+	if temp <= 10 {
+		return "temp-cold"
+	} else if temp <= 20 {
+		return "temp-cool"
+	} else if temp <= 30 {
+		return "temp-warm"
+	} else {
+		return "temp-hot"
+	}
+}
+
 func GetWeathers(w http.ResponseWriter, r *http.Request){
 	w.Header().Set("Content-Type", "text/html")
 	result, _ := WeatherDataParse()
 
-	// 🌟 데이터를 날짜(Date)와 시간(Time) 기준으로 정렬
 	sort.Slice(result, func(i, j int) bool {
 		if result[i].Date != result[j].Date {
-			return result[i].Date < result[j].Date // 날짜(Date) 기준 오름차순
+			return result[i].Date < result[j].Date
 		}
-		return result[i].Time < result[j].Time // 시간이 같으면 시간(Time) 기준 오름차순
+		return result[i].Time < result[j].Time
 	})
 
-	// 🌟 날짜별로 데이터를 그룹화
 	groupedByDate := make(map[string][]models.WeatherItem)
 	for _, item := range result {
 		groupedByDate[item.Date] = append(groupedByDate[item.Date], item)
 	}
 	
-	// 🌟 그룹화된 날짜를 정렬하기 위해 키를 슬라이스로 추출
 	var sortedDates []string
 	for date := range groupedByDate {
 		sortedDates = append(sortedDates, date)
 	}
-	sort.Strings(sortedDates) // 날짜를 오름차순으로 정렬
+	sort.Strings(sortedDates)
 
-	for _, date := range sortedDates { // 정렬된 날짜 순서대로 출력
+	// 최대 3일까지만 표시
+	maxDays := 3
+	if len(sortedDates) > maxDays {
+		sortedDates = sortedDates[:maxDays]
+	}
+
+	for i, date := range sortedDates {
 		items := groupedByDate[date]
-		fmt.Fprintf(w, `<div class="date-group">`)
-		for _, item := range items {
-			var 강수형태 string
-			if item.Pty == "none" {
-				강수형태 = ""
-			} else {
-				강수형태 = fmt.Sprintf("<p class='precipitation-status'>강수형태: %s</p>", item.Pty)
-			}
-			fmt.Fprintf(w, `
-				<div class="weather">
-					<p class="sky-status">%s</p>
-					%s
-					<p style="margin-bottom:0">기온: %s</p>
-					<p style="margin:5px 0 0 0">강수확률: %s</p>
-					<p style="margin: 0;">습도: %s</p>
-					<p class="time">%s</p>
-				</div>`,
-				item.Sky, 강수형태, item.Tmp, item.Pop, item.Humidity, item.Time)
+		formattedDate := fmt.Sprintf("%s년 %s월 %s일", 
+			date[:4], 
+			date[4:6], 
+			date[6:8])
+		
+		// 첫 번째 날짜(오늘)는 날짜 제목을 표시하지 않음
+		if i == 0 {
+			fmt.Fprintf(w, `<div class="date-group">
+				<div class="weather-grid">`)
+		} else {
+			fmt.Fprintf(w, `<div class="date-group">
+				<h3 class="date-title">%s</h3>
+				<div class="weather-grid">`, formattedDate)
 		}
-		fmt.Fprintf(w, "</div>")
+		
+		for _, item := range items {
+			// 첫 번째 날짜(오늘)는 모든 시간을 표시
+			// 그 외 날짜는 짝수 시간만 표시
+			timeInt, _ := strconv.Atoi(item.Time[:2])
+			if i == 0 || timeInt%2 == 0 {
+				var 강수형태 string
+				if item.Pty == "none" {
+					강수형태 = ""
+				} else {
+					강수형태 = fmt.Sprintf("<p class='precipitation-status'>%s</p>", item.Pty)
+				}
+				
+				tempClass := getTempClass(item.Tmp)
+				
+				fmt.Fprintf(w, `
+					<div class="weather">
+						<p class="sky-status">%s</p>
+						%s
+						<p class="temp %s">%s</p>
+						<p class="rain-chance">강수확률: %s</p>
+						<p class="humidity">습도: %s</p>
+						<p class="time">%s</p>
+					</div>`,
+					item.Sky, 강수형태, tempClass, item.Tmp, item.Pop, item.Humidity, formatTime(item.Time))
+			}
+		}
+		fmt.Fprintf(w, `</div></div>`)
 	}
 }
 
