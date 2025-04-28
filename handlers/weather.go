@@ -26,6 +26,16 @@ type RequestMetrics struct {
 	Duration  time.Duration
 }
 
+// 캐시 구조체 정의
+type WeatherCache struct {
+	Data      []models.WeatherItem
+	ExpiresAt time.Time
+	mutex     sync.RWMutex
+}
+
+// 전역 캐시 변수
+var weatherCache = &WeatherCache{}
+
 func getAPIKEY() string {
 	// .env 파일을 한 번만 로드하도록 sync.Once 사용
 	loadEnvOnce.Do(func() {
@@ -52,7 +62,7 @@ func getWeatherData() ([]models.WeatherItemToReturn, error) {
 	}
 
 	apiUrl := fmt.Sprintf(
-		"http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?serviceKey=%s&pageNo=1&numOfRows=1000&dataType=JSON&base_date=%s&base_time=%s&nx=%d&ny=%d",
+		"http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?serviceKey=%s&pageNo=1&numOfRows=900&dataType=JSON&base_date=%s&base_time=%s&nx=%d&ny=%d",
 		getAPIKEY(), getDate(), "1400", 77, 131, // 강원 홍천 화촌면 (77, 131)
 		// 대구 도원동 (88, 89)
 	)
@@ -154,56 +164,56 @@ func WeatherDataParse() ([]models.WeatherItem, error) {
 		Pty      string
 		Tmp      string
 		Pop      string
-    Humidity string
-    }
+		Humidity string
+	}
 
 	grouped := make(map[string]*tempWeather)
 
 	for _, item := range rawData {
-        key := item.Date + item.Time
+		key := item.Date + item.Time
 
-        if _, exists := grouped[key]; !exists {
-            grouped[key] = &tempWeather{}
-        }
+		if _, exists := grouped[key]; !exists {
+			grouped[key] = &tempWeather{}
+		}
 
-        switch item.Category {
-        case "SKY":
-            grouped[key].Sky = parseCategory("SKY", item.Value)
-        case "PTY":
-            grouped[key].Pty = parseCategory("PTY", item.Value)
-        case "TMP":
-            grouped[key].Tmp = item.Value + "℃"
-        case "POP":
-            grouped[key].Pop = item.Value + "%"
-        case "REH":
-            grouped[key].Humidity = item.Value + "%"
-        }
-    }
+		switch item.Category {
+		case "SKY":
+			grouped[key].Sky = parseCategory("SKY", item.Value)
+		case "PTY":
+			grouped[key].Pty = parseCategory("PTY", item.Value)
+		case "TMP":
+			grouped[key].Tmp = item.Value + "℃"
+		case "POP":
+			grouped[key].Pop = item.Value + "%"
+		case "REH":
+			grouped[key].Humidity = item.Value + "%"
+		}
+	}
 
 	var result []models.WeatherItem
 
 	for dateTime, weather := range grouped {
-        date := dateTime[:8]
-        time := dateTime[8:]
-        
-        result = append(result, models.WeatherItem{
-            Date:     date,
-            Time:     time,
-            Sky:      weather.Sky,
-            Pty:      weather.Pty,
-            Tmp:      weather.Tmp,
-            Pop:      weather.Pop,
-            Humidity: weather.Humidity,
-        })
-    }
+		date := dateTime[:8]
+		time := dateTime[8:]
+		
+		result = append(result, models.WeatherItem{
+			Date:     date,
+			Time:     time,
+			Sky:      weather.Sky,
+			Pty:      weather.Pty,
+			Tmp:      weather.Tmp,
+			Pop:      weather.Pop,
+			Humidity: weather.Humidity,
+		})
+	}
 
 	return result, nil
 }
 
 // formatTime 함수 추가
 func formatTime(timeStr string) string {
-    hour := timeStr[:2]
-    return fmt.Sprintf("%s시", hour)
+	hour := timeStr[:2]
+	return fmt.Sprintf("%s시", hour)
 }
 
 func getTempClass(tempStr string) string {
@@ -226,10 +236,62 @@ func getTempClass(tempStr string) string {
 	}
 }
 
-func GetWeathers(w http.ResponseWriter, r *http.Request){
-	w.Header().Set("Content-Type", "text/html")
-	result, _ := WeatherDataParse()
+// 캐시 만료 시간 계산 함수
+func calculateExpiryTime() time.Time {
+	now := time.Now()
+	// 다음 예보 시간 계산 (3시간 단위)
+	nextHour := ((now.Hour() / 3) + 1) * 3
+	if nextHour >= 24 {
+		nextHour = 0
+		now = now.AddDate(0, 0, 1)
+	}
+	return time.Date(now.Year(), now.Month(), now.Day(), nextHour, 0, 0, 0, time.Local)
+}
 
+// 캐시에서 데이터 가져오기
+func getFromCache() ([]models.WeatherItem, bool) {
+	weatherCache.mutex.RLock()
+	defer weatherCache.mutex.RUnlock()
+
+	if time.Now().Before(weatherCache.ExpiresAt) {
+		return weatherCache.Data, true
+	}
+	return nil, false
+}
+
+// 캐시에 데이터 저장
+func setCache(data []models.WeatherItem) {
+	weatherCache.mutex.Lock()
+	defer weatherCache.mutex.Unlock()
+
+	weatherCache.Data = data
+	weatherCache.ExpiresAt = calculateExpiryTime()
+}
+
+func GetWeathers(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html")
+	
+	// 캐시에서 데이터 확인
+	if cachedData, ok := getFromCache(); ok {
+		renderWeatherData(w, cachedData)
+		return
+	}
+
+	// 캐시에 없으면 새로운 데이터 가져오기
+	result, err := WeatherDataParse()
+	if err != nil {
+		http.Error(w, "날씨 데이터를 가져오는데 실패했습니다", http.StatusInternalServerError)
+		return
+	}
+
+	// 데이터 캐시에 저장
+	setCache(result)
+	
+	renderWeatherData(w, result)
+}
+
+// 날씨 데이터 렌더링 함수 분리
+func renderWeatherData(w http.ResponseWriter, result []models.WeatherItem) {
 	sort.Slice(result, func(i, j int) bool {
 		if result[i].Date != result[j].Date {
 			return result[i].Date < result[j].Date
