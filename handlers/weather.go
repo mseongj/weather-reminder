@@ -33,8 +33,17 @@ type WeatherCache struct {
 	mutex     sync.RWMutex
 }
 
-// 전역 캐시 변수
-var weatherCache = &WeatherCache{}
+var (
+	weatherCache = &WeatherCache{}
+	httpClient   = &http.Client{
+		Timeout: 10 * time.Second,
+		Transport: &http.Transport{
+			MaxIdleConns:        100,
+			MaxIdleConnsPerHost: 100,
+			IdleConnTimeout:     90 * time.Second,
+		},
+	}
+)
 
 func getAPIKEY() string {
 	// .env 파일을 한 번만 로드하도록 sync.Once 사용
@@ -67,7 +76,7 @@ func getWeatherData() ([]models.WeatherItemToReturn, error) {
 		// 대구 도원동 (88, 89)
 	)
 
-	resp, err := http.Get(apiUrl)
+	resp, err := httpClient.Get(apiUrl)
 	if err != nil {
 		return nil, fmt.Errorf("HTTP 요청 실패: %v", err)
 	}
@@ -159,52 +168,72 @@ func WeatherDataParse() ([]models.WeatherItem, error) {
 		return nil, err
 	}
 
-	type tempWeather struct {
-		Sky      string
-		Pty      string
-		Tmp      string
-		Pop      string
-		Humidity string
+	// 미리 필요한 크기로 맵 초기화
+	grouped := make(map[string]*models.WeatherItem, len(rawData)/5)
+	var mu sync.Mutex // 맵 동시성 제어를 위한 뮤텍스
+
+	// 데이터를 청크로 나누어 처리
+	chunkSize := 100
+	chunks := len(rawData) / chunkSize
+	if len(rawData)%chunkSize != 0 {
+		chunks++
 	}
 
-	grouped := make(map[string]*tempWeather)
-
-	for _, item := range rawData {
-		key := item.Date + item.Time
-
-		if _, exists := grouped[key]; !exists {
-			grouped[key] = &tempWeather{}
+	var wg sync.WaitGroup
+	for i := 0; i < chunks; i++ {
+		wg.Add(1)
+		start := i * chunkSize
+		end := start + chunkSize
+		if end > len(rawData) {
+			end = len(rawData)
 		}
 
-		switch item.Category {
-		case "SKY":
-			grouped[key].Sky = parseCategory("SKY", item.Value)
-		case "PTY":
-			grouped[key].Pty = parseCategory("PTY", item.Value)
-		case "TMP":
-			grouped[key].Tmp = item.Value + "℃"
-		case "POP":
-			grouped[key].Pop = item.Value + "%"
-		case "REH":
-			grouped[key].Humidity = item.Value + "%"
-		}
+		go func(items []models.WeatherItemToReturn) {
+			defer wg.Done()
+			for _, item := range items {
+				key := item.Date + item.Time
+
+				mu.Lock()
+				if _, exists := grouped[key]; !exists {
+					grouped[key] = &models.WeatherItem{
+						Date: item.Date,
+						Time: item.Time,
+					}
+				}
+				mu.Unlock()
+
+				switch item.Category {
+				case "SKY":
+					mu.Lock()
+					grouped[key].Sky = parseCategory("SKY", item.Value)
+					mu.Unlock()
+				case "PTY":
+					mu.Lock()
+					grouped[key].Pty = parseCategory("PTY", item.Value)
+					mu.Unlock()
+				case "TMP":
+					mu.Lock()
+					grouped[key].Tmp = item.Value + "℃"
+					mu.Unlock()
+				case "POP":
+					mu.Lock()
+					grouped[key].Pop = item.Value + "%"
+					mu.Unlock()
+				case "REH":
+					mu.Lock()
+					grouped[key].Humidity = item.Value + "%"
+					mu.Unlock()
+				}
+			}
+		}(rawData[start:end])
 	}
 
-	var result []models.WeatherItem
+	wg.Wait()
 
-	for dateTime, weather := range grouped {
-		date := dateTime[:8]
-		time := dateTime[8:]
-		
-		result = append(result, models.WeatherItem{
-			Date:     date,
-			Time:     time,
-			Sky:      weather.Sky,
-			Pty:      weather.Pty,
-			Tmp:      weather.Tmp,
-			Pop:      weather.Pop,
-			Humidity: weather.Humidity,
-		})
+	// 결과 슬라이스 미리 할당
+	result := make([]models.WeatherItem, 0, len(grouped))
+	for _, weather := range grouped {
+		result = append(result, *weather)
 	}
 
 	return result, nil
@@ -236,16 +265,20 @@ func getTempClass(tempStr string) string {
 	}
 }
 
-// 캐시 만료 시간 계산 함수
-func calculateExpiryTime() time.Time {
+// 다음 예보 발표 시간 계산 함수
+func getNextForecastTime() time.Time {
 	now := time.Now()
-	// 다음 예보 시간 계산 (3시간 단위)
-	nextHour := ((now.Hour() / 3) + 1) * 3
-	if nextHour >= 24 {
-		nextHour = 0
-		now = now.AddDate(0, 0, 1)
+	forecastHours := []int{2, 5, 8, 11, 14, 17, 20, 23}
+	
+	// 현재 시간 이후의 다음 발표 시간 찾기
+	for _, hour := range forecastHours {
+		if now.Hour() < hour {
+			return time.Date(now.Year(), now.Month(), now.Day(), hour, 0, 0, 0, time.Local)
+		}
 	}
-	return time.Date(now.Year(), now.Month(), now.Day(), nextHour, 0, 0, 0, time.Local)
+	
+	// 다음날 02시로 설정
+	return time.Date(now.Year(), now.Month(), now.Day()+1, 2, 0, 0, 0, time.Local)
 }
 
 // 캐시에서 데이터 가져오기
@@ -265,7 +298,7 @@ func setCache(data []models.WeatherItem) {
 	defer weatherCache.mutex.Unlock()
 
 	weatherCache.Data = data
-	weatherCache.ExpiresAt = calculateExpiryTime()
+	weatherCache.ExpiresAt = getNextForecastTime()
 }
 
 func GetWeathers(w http.ResponseWriter, r *http.Request) {
@@ -273,19 +306,39 @@ func GetWeathers(w http.ResponseWriter, r *http.Request) {
 	
 	// 캐시에서 데이터 확인
 	if cachedData, ok := getFromCache(); ok {
+		log.Printf("캐시된 날씨 데이터 사용 (만료 시간: %v)", weatherCache.ExpiresAt)
 		renderWeatherData(w, cachedData)
+		
+		// 다음 예보 발표 시간이 10분 이내로 남은 경우에만 백그라운드 갱신
+		nextForecastTime := getNextForecastTime()
+		if time.Until(nextForecastTime) < 10*time.Minute {
+			go func() {
+				// 실제 발표 시간 + 5분까지 대기 (데이터 갱신 시간 고려)
+				time.Sleep(time.Until(nextForecastTime.Add(5 * time.Minute)))
+				
+				result, err := WeatherDataParse()
+				if err != nil {
+					log.Printf("백그라운드 캐시 갱신 실패: %v", err)
+					return
+				}
+				setCache(result)
+				log.Printf("백그라운드 캐시 갱신 완료 (만료 시간: %v)", weatherCache.ExpiresAt)
+			}()
+		}
 		return
 	}
 
 	// 캐시에 없으면 새로운 데이터 가져오기
 	result, err := WeatherDataParse()
 	if err != nil {
-		http.Error(w, "날씨 데이터를 가져오는데 실패했습니다", http.StatusInternalServerError)
+		log.Printf("날씨 데이터 가져오기 실패: %v", err)
+		http.Error(w, "날씨 데이터를 가져오는데 실패했습니다. 잠시 후 다시 시도해주세요.", http.StatusInternalServerError)
 		return
 	}
 
 	// 데이터 캐시에 저장
 	setCache(result)
+	log.Printf("새로운 날씨 데이터 캐시 저장 (만료 시간: %v)", weatherCache.ExpiresAt)
 	
 	renderWeatherData(w, result)
 }
