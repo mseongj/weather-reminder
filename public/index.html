@@ -1,92 +1,100 @@
 <!DOCTYPE html>
 <html lang="ko">
-  <head>
+<head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>날씨 정보</title>
     <script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@100..900&display=swap"
-      rel="stylesheet"
-    />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&family=Noto+Sans+KR:wght@100..900&display=swap"
-      rel="stylesheet"
-    />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@100..900&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css" />
-  </head>
-  <body>
-    <div class="headder">
-      <h2>현재 시간: <span id="current-time"></span></h2>
-      <h3>날짜: <span id="current-date"></span></h3>
+</head>
+<body>
+    <div class="header">
+        <h2>현재 시간: <span id="current-time"></span></h2>
+        <h3>날짜: <span id="current-date"></span></h3>
     </div>
+
     <div class="container">
-      <div
-        class="weather-container"
-        id="weather-list"
-        hx-get="http://127.0.0.1:8080/getweathers"
-        hx-trigger="load, every 3600s"
-        hx-target="#weather-list"
-        hx-swap="innerHTML"
-        hx-on::after-request="handleResponse(event)"
-      >
-        <!-- 날씨 정보가 여기에 로드됨 -->
-      </div>
+        <div class="today-section">
+            <div class="weather-container" 
+                 id="today-weather"
+                 hx-get="http://127.0.0.1:8080/getTodayWeather"
+                 hx-trigger="load, every 3600s"
+                 hx-swap="innerHTML"
+                 hx-on::after-request="handleResponse(event)">
+                <!-- 오늘 날씨 정보가 여기에 로드됨 -->
+            </div>
+            <div class="news-container">
+                <h2>오늘의 뉴스</h2>
+                <div id="news-content">
+                    <!-- 뉴스 콘텐츠가 여기에 로드될 예정 -->
+                    <p>뉴스 기능은 준비 중입니다.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="future-section">
+            <div class="weather-container" 
+                 id="future-weather"
+                 hx-get="http://127.0.0.1:8080/getFutureWeather"
+                 hx-trigger="load, every 3600s"
+                 hx-swap="innerHTML"
+                 hx-on::after-request="handleResponse(event)">
+                <!-- 주간 날씨 정보가 여기에 로드됨 -->
+            </div>
+        </div>
     </div>
 
     <!-- 에러 모달 -->
     <div id="errorModal" class="modal">
-      <div class="modal-content">
-        <span class="close">&times;</span>
-        <h2>날씨 정보를 가져올 수 없습니다</h2>
-        <p>서버와의 연결이 원활하지 않습니다. 잠시 후 다시 시도해주세요.</p>
-        <button onclick="retryWeatherUpdate()">다시 시도</button>
-      </div>
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>날씨 정보를 가져올 수 없습니다</h2>
+            <p>서버와의 연결이 원활하지 않습니다. 잠시 후 다시 시도해주세요.</p>
+            <button onclick="retryWeatherUpdate()">다시 시도</button>
+        </div>
     </div>
 
     <script>
-      function updateTime() {
-        const now = new Date();
-        document.getElementById("current-time").textContent =
-          now.toLocaleTimeString();
-        document.getElementById("current-date").textContent =
-          now.toLocaleDateString();
-      }
-      setInterval(updateTime, 1000);
-      updateTime();
-
-      // 모달 관련 변수
-      const modal = document.getElementById('errorModal');
-      const closeBtn = document.getElementsByClassName('close')[0];
-
-      // 모달 닫기 이벤트
-      closeBtn.onclick = function() {
-        modal.classList.remove('show');
-      }
-
-      // 모달 외부 클릭 시 닫기
-      window.onclick = function(event) {
-        if (event.target == modal) {
-          modal.classList.remove('show');
+        function updateTime() {
+            const now = new Date();
+            document.getElementById("current-time").textContent = now.toLocaleTimeString();
+            document.getElementById("current-date").textContent = now.toLocaleDateString();
         }
-      }
+        setInterval(updateTime, 1000);
+        updateTime();
 
-      // HTMX 응답 처리
-      function handleResponse(event) {
-        if (event.detail.successful) {
-          modal.classList.remove('show');
-        } else {
-          modal.classList.add('show');
+        const modal = document.getElementById('errorModal');
+        const closeBtn = document.getElementsByClassName('close')[0];
+
+        closeBtn.onclick = function() {
+            modal.classList.remove('show');
         }
-      }
 
-      // 다시 시도 버튼 클릭 시
-      function retryWeatherUpdate() {
-        modal.classList.remove('show');
-        htmx.trigger('#weather-list', 'load');
-      }
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                modal.classList.remove('show');
+            }
+        }
+
+        function handleResponse(event) {
+            const weatherContainer = event.target;
+            if (!event.detail.successful) {
+                modal.classList.add('show');
+                weatherContainer.innerHTML = `<p style="color: #d32f2f; text-align: center;">데이터 로딩 실패</p>`;
+            } else {
+                modal.classList.remove('show');
+            }
+        }
+
+        function retryWeatherUpdate() {
+            modal.classList.remove('show');
+            htmx.trigger('#today-weather', 'load');
+            htmx.trigger('#future-weather', 'load');
+        }
     </script>
-  </body>
+</body>
 </html>

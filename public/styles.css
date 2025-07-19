@@ -1,291 +1,210 @@
 /* ===== 기본 스타일 ===== */
 body {
-  font-family: "Noto Sans KR", sans-serif;
-  margin: 0;
-  background-color: #f0f2f5;
-  color: #333;
-  text-align: center;
-  overflow: hidden;
+    font-family: 'Noto Sans KR', sans-serif;
+    margin: 0;
+    background-color: #f0f2f5;
+    color: #333;
+    overflow-x: hidden;
 }
 
 /* ===== 레이아웃 컨테이너 ===== */
 .container {
-  max-width: 100%;
-  margin: 0 auto;
-  padding: 5px;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
+    display: flex;
+    height: calc(100vh - 60px); /* 헤더 높이만큼 제외 */
+    padding: 10px;
+    gap: 10px;
+}
+
+.today-section {
+    flex: 0 0 65%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.future-section {
+    flex: 0 0 35%;
+    display: flex;
+    flex-direction: column;
 }
 
 /* ===== 헤더 스타일 ===== */
-.headder {
-  height: 40px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 15px;
-  background: white;
-  border-radius: 8px;
-  margin-bottom: 5px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  flex-shrink: 0;
+.header {
+    height: 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+    background: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-/* ===== 날씨 컨테이너 ===== */
-.weather-container {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  padding: 5px;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  min-height: 0;
-  overflow: hidden;
+/* ===== 공통 컨테이너 스타일 ===== */
+.weather-container, .news-container {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    padding: 15px;
+    overflow: hidden;
+}
+
+/* ===== 오늘 날씨 섹션 ===== */
+#today-weather {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ===== 뉴스 컨테이너 ===== */
+.news-container {
+    height: 40%;
+    flex-shrink: 0;
+    overflow-y: auto;
+}
+
+.news-container h2 {
+    margin-top: 0;
+    font-size: 1.5em;
+    color: #333;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+}
+
+/* ===== 미래 날씨 섹션 ===== */
+#future-weather {
+    height: 100%;
+    overflow-y: auto;
 }
 
 /* ===== 날짜 그룹 ===== */
 .date-group {
-  display: flex;
-  flex-direction: column;
-  background: #f8f9fa;
-  border-radius: 8px;
-  padding: 5px;
-  margin-bottom: 2px;
-  min-height: 0;
-}
-
-.date-group:first-child {
-  background-color: #e3f2fd;
-  padding: 10px;
-  flex: 0 1 auto;
-  overflow-y: auto;
-  max-height: 60vh;
-}
-
-.date-group:not(:first-child) {
-  flex: 0 0 auto;
+    margin-bottom: 15px;
 }
 
 .date-title {
-  margin: 0 0 3px 0;
-  font-size: 14px;
-  color: #333;
+    font-weight: bold;
+    margin-bottom: 10px;
+    font-size: 1.1em;
+    color: #1976d2;
 }
 
-.date-group:first-child .date-title {
-  font-size: 20px;
-  color: #1976d2;
-  font-weight: bold;
+/* 오늘 날씨 그리드 */
+#today-weather .weather-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 15px;
+    overflow-y: auto;
+    padding-right: 10px; /* 스크롤바 공간 */
 }
 
-/* ===== 날씨 그리드 ===== */
-.weather-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
-  gap: 5px;
-  padding: 2px;
-  min-height: 0;
-}
-
-.date-group:first-child .weather-grid {
-  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-  gap: 8px;
-  padding: 5px;
+/* 미래 날씨 그리드 */
+#future-weather .weather-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 8px;
 }
 
 /* ===== 날씨 아이템 ===== */
 .weather {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 5px;
-  background: white;
-  border-radius: 6px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  transition: transform 0.2s;
-  min-width: 0;
-}
-
-.date-group:first-child .weather {
-  padding: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .weather:hover {
-  transform: translateY(-2px);
+    transform: translateY(-3px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
 }
 
-/* ===== 날씨 상태 표시 ===== */
+/* 오늘 날씨 아이템 */
+#today-weather .weather {
+    padding: 15px;
+}
+
+/* ===== 날씨 상태(이모지) ===== */
 .sky-status {
-  font-family: "Noto Color Emoji", sans-serif;
-  margin: 2px 0;
+    font-family: 'Noto Color Emoji', sans-serif;
 }
 
-.date-group:first-child .sky-status {
-  font-size: 36px;
+#today-weather .sky-status {
+    font-size: 48px;
+    margin: 10px 0;
 }
 
-.date-group:not(:first-child) .sky-status {
-  font-size: 24px;
+#future-weather .sky-status {
+    font-size: 32px;
+    margin: 5px 0;
 }
 
-/* ===== 온도 표시 ===== */
+/* ===== 온도 ===== */
 .temp {
-  font-weight: bold;
-  margin: 2px 0;
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
+    font-weight: bold;
+    font-size: 1.5em;
 }
 
-.date-group:first-child .temp {
-  font-size: 20px;
+#today-weather .temp {
+    font-size: 2em;
 }
 
-.date-group:not(:first-child) .temp {
-  font-size: 14px;
+#future-weather .temp {
+    font-size: 1.2em;
 }
 
-/* 온도 색상 클래스 */
-.temp-cold { color: #2196f3; }    /* 10도 이하 */
-.temp-cool { color: #4caf50; }    /* 11-20도 */
-.temp-warm { color: #ff9800; }    /* 21-30도 */
-.temp-hot  { color: #f44336; }    /* 31도 이상 */
-
-/* ===== 기타 날씨 정보 ===== */
-.rain-chance {
-  margin: 2px 0;
+/* ===== 기타 정보 ===== */
+.rain-chance, .time, .humidity {
+    font-size: 0.9em;
+    color: #555;
+    margin-top: 5px;
 }
 
-.date-group:first-child .rain-chance {
-  font-size: 14px;
-  color: #1976d2;
+#today-weather .rain-chance, #today-weather .time {
+    font-size: 0.8em;
 }
 
-.date-group:not(:first-child) .rain-chance {
-  font-size: 11px;
-  color: #666;
-}
-
-.time {
-  font-size: 11px;
-  color: #666;
-  margin: 2px 0;
-}
-
-.precipitation-status {
-  color: #4caf50;
-  margin: 2px 0;
-  font-size: 11px;
-}
-
-.humidity {
-  font-size: 11px;
-  color: #666;
-  margin: 2px 0;
+#future-weather .rain-chance, #future-weather .time {
+    font-size: 0.8em;
+    color: #777;
 }
 
 /* ===== 스크롤바 스타일 ===== */
-.date-group:first-child::-webkit-scrollbar {
-  width: 6px;
+#today-weather .weather-grid::-webkit-scrollbar, 
+#future-weather::-webkit-scrollbar, 
+.news-container::-webkit-scrollbar {
+    width: 8px;
 }
 
-.date-group:first-child::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 3px;
+#today-weather .weather-grid::-webkit-scrollbar-track, 
+#future-weather::-webkit-scrollbar-track, 
+.news-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
 }
 
-.date-group:first-child::-webkit-scrollbar-thumb {
-  background: #888;
-  border-radius: 3px;
+#today-weather .weather-grid::-webkit-scrollbar-thumb, 
+#future-weather::-webkit-scrollbar-thumb, 
+.news-container::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 4px;
 }
 
-.date-group:first-child::-webkit-scrollbar-thumb:hover {
-  background: #555;
+#today-weather .weather-grid::-webkit-scrollbar-thumb:hover, 
+#future-weather::-webkit-scrollbar-thumb:hover, 
+.news-container::-webkit-scrollbar-thumb:hover {
+    background: #999;
 }
 
-/* ===== 모달 스타일 ===== */
-.modal {
-  display: none;
-  position: fixed;
-  z-index: 1;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0,0,0,0.4);
-  opacity: 0;
-  transition: opacity 0.3s ease-in-out;
-}
-
-.modal.show {
-  display: block;
-  opacity: 1;
-}
-
-.modal-content {
-  background-color: #fefefe;
-  margin: 15% auto;
-  padding: 20px;
-  border: 1px solid #888;
-  width: 80%;
-  max-width: 500px;
-  border-radius: 10px;
-  text-align: center;
-  transform: translateY(-50px);
-  opacity: 0;
-  transition: all 0.3s ease-in-out;
-}
-
-.modal.show .modal-content {
-  transform: translateY(0);
-  opacity: 1;
-}
-
-.close {
-  color: #aaa;
-  float: right;
-  font-size: 28px;
-  font-weight: bold;
-  cursor: pointer;
-  transition: color 0.2s ease-in-out;
-}
-
-.close:hover {
-  color: black;
-}
-
-.modal button {
-  background-color: #9ad198;
-  color: white;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 16px;
-  margin-top: 20px;
-  transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
-}
-
-.modal button:hover {
-  background-color: #45a049;
-  transform: scale(1.1);
-}
-
-.modal button:active {
-  transform: scale(0.95);
-}
-
-.modal h2 {
-  color: #333;
-  margin-bottom: 15px;
-  font-size: 24px;
-}
-
-.modal p {
-  color: #666;
-  line-height: 1.5;
-  margin-bottom: 20px;
-}
+/* ===== 모달 스타일 (기존과 유사) ===== */
+.modal { display: none; position: fixed; z-index: 1; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); opacity: 0; transition: opacity 0.3s; }
+.modal.show { display: block; opacity: 1; }
+.modal-content { background-color: #fff; margin: 15% auto; padding: 25px; border-radius: 10px; width: 90%; max-width: 450px; text-align: center; transform: translateY(-50px); opacity: 0; transition: all 0.3s; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+.modal.show .modal-content { transform: translateY(0); opacity: 1; }
+.close { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; } 
+.close:hover { color: #333; }
+.modal button { background-color: #1976d2; color: white; padding: 12px 25px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; margin-top: 15px; transition: background-color 0.2s; }
+.modal button:hover { background-color: #135a9e; }
