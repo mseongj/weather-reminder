@@ -21,7 +21,7 @@
         <div class="today-section">
             <div class="weather-container" 
                  id="today-weather"
-                 hx-get="http://127.0.0.1:8080/getTodayWeather"
+                 hx-get="/getTodayWeather"
                  hx-trigger="load, every 3600s"
                  hx-swap="innerHTML"
                  hx-on::after-request="handleResponse(event)">
@@ -39,7 +39,7 @@
         <div class="future-section">
             <div class="weather-container" 
                  id="future-weather"
-                 hx-get="http://127.0.0.1:8080/getFutureWeather"
+                 hx-get="/getFutureWeather"
                  hx-trigger="load, every 3600s"
                  hx-swap="innerHTML"
                  hx-on::after-request="handleResponse(event)">

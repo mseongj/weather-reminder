@@ -17,7 +17,12 @@ import (
 	"github.com/mseongj/weather-reminder/models"
 )
 
-var loadEnvOnce sync.Once
+func init() {
+	if err := godotenv.Load(".env"); err != nil {
+		// .env 파일이 없어도 서버가 죽지 않도록 경고만 출력합니다.
+		log.Println("Warning: Error loading .env file:", err)
+	}
+}
 
 type RequestMetrics struct {
 	StartTime time.Time
@@ -43,12 +48,12 @@ var (
 	}
 )
 
-func getAPIKEY() string {
-	loadEnvOnce.Do(func() {
-		if err := godotenv.Load(".env"); err != nil {
-			log.Fatal("Error loading .env file")
-		}
-	})
+func getAPIKEY(isNews bool) string {
+	if isNews {
+		// 뉴스용 API 키 반환
+		return os.Getenv("NEWS_API_KEY")
+	}
+	// 날씨용 API 키 반환
 	return os.Getenv("API_KEY")
 }
 
@@ -86,8 +91,13 @@ func getWeatherData() ([]models.WeatherItemToReturn, error) {
 	metrics := RequestMetrics{StartTime: time.Now()}
 	baseDate, baseTime := getBaseDateTime()
 	apiUrl := fmt.Sprintf(
-		"http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?serviceKey=%s&pageNo=1&numOfRows=900&dataType=JSON&base_date=%s&base_time=%s&nx=%d&ny=%d",
-		getAPIKEY(), baseDate, baseTime, 77, 131,
+		// "http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?serviceKey=%s&pageNo=1&numOfRows=900&dataType=JSON&base_date=%s&base_time=%s&nx=%d&ny=%d",
+		"https://apihub.kma.go.kr/api/typ02/openApi/VilageFcstInfoService_2.0/getVilageFcst?pageNo=1&numOfRows=900&dataType=JSON&base_date=%s&base_time=%s&nx=%d&ny=%d&authKey=%s",
+		baseDate,
+		baseTime, 
+		77,
+		131,
+		getAPIKEY(false),
 	)
 
 	resp, err := httpClient.Get(apiUrl)
