@@ -156,6 +156,36 @@ body {
     font-size: 1.2em;
 }
 
+/* ===== 뉴스 항목 스타일 ===== */
+.news-item {
+    border-bottom: 1px solid #eee;
+    padding: 10px 0;
+}
+
+.news-item:last-child {
+    border-bottom: none;
+}
+
+.news-item h4 {
+    margin: 0 0 5px 0;
+    font-size: 1.1em;
+}
+
+.news-item h4 a {
+    text-decoration: none;
+    color: #333;
+}
+
+.news-item h4 a:hover {
+    color: #1976d2;
+}
+
+.news-item p {
+    margin: 0;
+    font-size: 0.9em;
+    color: #555;
+}
+
 /* ===== 기타 정보 ===== */
 .rain-chance, .time, .humidity {
     font-size: 0.9em;
