@@ -105,6 +105,15 @@ body {
     gap: 8px;
 }
 
+.grid-full-width {
+    grid-column: 1 / -1;
+    margin-bottom: 5px;
+}
+
+#today-weather .date-title {
+    margin-bottom: 5px;
+}
+
 /* ===== 날씨 아이템 ===== */
 .weather {
     display: flex;
@@ -238,3 +247,79 @@ body {
 .close:hover { color: #333; }
 .modal button { background-color: #1976d2; color: white; padding: 12px 25px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; margin-top: 15px; transition: background-color 0.2s; }
 .modal button:hover { background-color: #135a9e; }
+
+/* Dark Mode css코드 */
+body.dark-mode {
+    background-color: #121212;
+    color: #e0e0e0;
+}
+
+body.dark-mode .header,
+body.dark-mode .weather-container,
+body.dark-mode .news-container {
+    background: #1e1e1e;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+
+body.dark-mode h2,
+body.dark-mode h3,
+body.dark-mode .news-item h4 a {
+    color: #f5f5f5;
+}
+
+body.dark-mode .news-item h4 a:hover {
+    color: #4dabf7;
+}
+
+body.dark-mode .news-container h2 {
+    border-bottom-color: #333;
+}
+
+body.dark-mode .weather {
+    background: #2a2a2a;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+body.dark-mode .rain-chance,
+body.dark-mode .time,
+body.dark-mode .humidity,
+body.dark-mode .news-item p,
+body.dark-mode .close {
+    color: #aaa;
+}
+
+body.dark-mode .close:hover {
+    color: #f1f1f1;
+}
+
+body.dark-mode .news-item {
+    border-bottom-color: #333;
+}
+
+body.dark-mode .date-title {
+    color: #4dabf7;
+}
+
+/* 다크 모드 모달 */
+body.dark-mode .modal-content {
+    background-color: #2a2a2a;
+}
+
+/* 다크 모드 스크롤바 */
+body.dark-mode #today-weather .weather-grid::-webkit-scrollbar-track,
+body.dark-mode #future-weather::-webkit-scrollbar-track,
+body.dark-mode .news-container::-webkit-scrollbar-track {
+    background: #2a2a2a;
+}
+
+body.dark-mode #today-weather .weather-grid::-webkit-scrollbar-thumb,
+body.dark-mode #future-weather::-webkit-scrollbar-thumb,
+body.dark-mode .news-container::-webkit-scrollbar-thumb {
+    background: #555;
+}
+
+body.dark-mode #today-weather .weather-grid::-webkit-scrollbar-thumb:hover,
+body.dark-mode #future-weather::-webkit-scrollbar-thumb:hover,
+body.dark-mode .news-container::-webkit-scrollbar-thumb:hover {
+    background: #777;
+}

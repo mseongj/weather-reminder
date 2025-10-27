@@ -65,6 +65,16 @@
             const now = new Date();
             document.getElementById("current-time").textContent = now.toLocaleTimeString();
             document.getElementById("current-date").textContent = now.toLocaleDateString();
+
+            const hour = now.getHours(); // 0 (자정) 부터 23 (오후 11시)
+            
+            // 20시(오후 8시) 이상일 경우
+            if (hour >= 20 || hour < 6) {
+                document.body.classList.add('dark-mode');
+            } else {
+                document.body.classList.remove('dark-mode');
+            }
+            // --- ⬆️ 다크 모드 로직 추가 ⬆️ ---
         }
         setInterval(updateTime, 1000);
         updateTime();

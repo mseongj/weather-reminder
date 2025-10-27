@@ -262,8 +262,10 @@ func GetTodayWeather(w http.ResponseWriter, r *http.Request) {
         http.Error(w, "날씨 정보를 가져올 수 없습니다.", http.StatusInternalServerError)
         return
     }
+		
+		now := time.Now()
+    today := now.Format("20060102")
 
-    today := time.Now().Format("20060102")
     var todayWeather []models.WeatherItem
     for _, item := range allWeather {
         if item.Date == today {
@@ -275,7 +277,32 @@ func GetTodayWeather(w http.ResponseWriter, r *http.Request) {
         return todayWeather[i].Time < todayWeather[j].Time
     })
 
-    renderTodayWeather(w, todayWeather)
+		var tomorrowWeatherPreview []models.WeatherItem
+
+		// 현재 시간이 20시(오후 8시) 이후인 경우
+    if now.Hour() >= 20 {
+        tomorrowDate := now.AddDate(0, 0, 1).Format("20060102")
+        
+        var tomorrowWeather []models.WeatherItem
+        for _, item := range allWeather {
+            if item.Date == tomorrowDate {
+                tomorrowWeather = append(tomorrowWeather, item)
+            }
+        }
+        sort.Slice(tomorrowWeather, func(i, j int) bool {
+            return tomorrowWeather[i].Time < tomorrowWeather[j].Time
+        })
+
+        // 내일 날씨 중 '오전 6시'부터 '12시'까지의 데이터만 '미리보기'로 추가
+        for _, item := range tomorrowWeather {
+            timeInt, _ := strconv.Atoi(item.Time[:2])
+            if timeInt >= 0 && timeInt <= 6 {
+                tomorrowWeatherPreview = append(tomorrowWeatherPreview, item)
+            }
+        }
+    }
+
+    renderTodayWeather(w, todayWeather, tomorrowWeatherPreview)
 }
 
 func GetFutureWeather(w http.ResponseWriter, r *http.Request) {
@@ -308,57 +335,102 @@ func GetFutureWeather(w http.ResponseWriter, r *http.Request) {
     renderFutureWeather(w, sortedDates, groupedByDate)
 }
 
-func renderTodayWeather(w http.ResponseWriter, items []models.WeatherItem) {
+func renderTodayWeather(w http.ResponseWriter, items []models.WeatherItem, tomorrowPreview []models.WeatherItem) {
 	fmt.Fprint(w, `<div class="weather-grid">`)
-	for _, item := range items {
-		displayIcon := item.Sky
-		if item.Pty != "none" {
-			displayIcon = item.Pty
+	if len(items) > 0 {
+		for _, item := range items {
+			displayIcon := item.Sky
+			if item.Pty != "none" {
+				displayIcon = item.Pty
+			}
+			tempClass := getTempClass(item.Tmp)
+			fmt.Fprintf(w, `
+							<div class="weather">
+									<p class="sky-status">%s</p>
+									<p class="temp %s">%s</p>
+									<p class="rain-chance">강수확률: %s</p>
+									<p class="humidity">습도: %s</p>
+									<p class="time">%s</p>
+							</div>`,
+				displayIcon, tempClass, item.Tmp, item.Pop, item.Humidity, formatTime(item.Time))
 		}
-		tempClass := getTempClass(item.Tmp)
-		fmt.Fprintf(w, `
-            <div class="weather">
-                <p class="sky-status">%s</p>
-                <p class="temp %s">%s</p>
-                <p class="rain-chance">강수확률: %s</p>
-                <p class="humidity">습도: %s</p>
-                <p class="time">%s</p>
-            </div>`,
-			displayIcon, tempClass, item.Tmp, item.Pop, item.Humidity, formatTime(item.Time))
 	}
+
+	if len(tomorrowPreview) > 0 {
+		style := ""
+    if len(items) > 0 {
+     	style = `style="margin-top: 15px;"`
+		}
+    fmt.Fprint(w, `<h3 class="date-title grid-full-width" style="margin-top: 15px;">내일 새벽 (1-6시)</h3>`, style)
+
+    for _, item := range tomorrowPreview {
+    	displayIcon := item.Sky
+      if item.Pty != "none" {
+      	displayIcon = item.Pty
+      }
+      tempClass := getTempClass(item.Tmp)
+      fmt.Fprintf(w, `
+      	<div class="weather">
+        <p class="sky-status">%s</p>
+        <p class="temp %s">%s</p>
+        <p class="rain-chance">강수확률: %s</p>
+        <p class="humidity">습도: %s</p>
+        <p class="time">%s</p>
+        </div>`,
+        displayIcon, tempClass, item.Tmp, item.Pop, item.Humidity, formatTime(item.Time))
+      }
+    }
 	fmt.Fprint(w, `</div>`)
 }
 
 func renderFutureWeather(w http.ResponseWriter, dates []string, data map[string][]models.WeatherItem) {
-    for _, date := range dates {
-        items := data[date]
-        sort.Slice(items, func(i, j int) bool {
-            return items[i].Time < items[j].Time
-        })
+    for i, date := range dates {
+			items := data[date]
+      sort.Slice(items, func(i, j int) bool {
+      	return items[i].Time < items[j].Time
+		})
 
-        formattedDate := fmt.Sprintf("%s월 %s일", date[4:6], date[6:8])
-        fmt.Fprintf(w, `<div class="date-group">
-            <h3 class="date-title">%s</h3>
-            <div class="weather-grid">`, formattedDate)
+		formattedDate := fmt.Sprintf("%s월 %s일", date[4:6], date[6:8])
+    fmt.Fprintf(w, `<div class="date-group">
+    	<h3 class="date-title">%s</h3>
+      <div class="weather-grid">`, formattedDate)
 
-        for _, item := range items {
-            timeInt, _ := strconv.Atoi(item.Time[:2])
-            if timeInt % 2 == 0 { // 2시간 간격으로 표시
-                displayIcon := item.Sky
+		for _, item := range items {
+			shouldDisplay := false
+
+			timeInt, _ := strconv.Atoi(item.Time[:2])
+
+      if i == 0 {
+      	// "내일" (i == 0) 날씨: 6시(> 5) 이후부터 1시간 간격으로 표시
+        // ⭐️ 2. (0시-5시 제외) 조건을 추가
+        if timeInt > 5 { 
+        	shouldDisplay = true
+        }
+      } else {
+      	// "모레" (i > 0) 날씨: 2시간 간격으로 표시
+        if timeInt % 2 == 0 { 
+        	shouldDisplay = true
+        }
+      }
+
+      // ⭐️ 3. shouldDisplay가 true일 때만 렌더링
+			if shouldDisplay {
+      	displayIcon := item.Sky
 				if item.Pty != "none" {
 					displayIcon = item.Pty
 				}
-                tempClass := getTempClass(item.Tmp)
-                fmt.Fprintf(w, `
-                    <div class="weather">
-                        <p class="sky-status">%s</p>
-                        <p class="temp %s">%s</p>
-                        <p class="rain-chance">강수: %s</p>
-                        <p class="time">%s</p>
-                    </div>`,
-                    displayIcon, tempClass, item.Tmp, item.Pop, formatTime(item.Time))
-            }
-        }
-        fmt.Fprint(w, `</div></div>`)
+      
+				tempClass := getTempClass(item.Tmp)
+				fmt.Fprintf(w, `
+					<div class="weather">
+					<p class="sky-status">%s</p>
+					<p class="temp %s">%s</p>
+					<p class="rain-chance">강수: %s</p>
+					<p class="time">%s</p>
+					</div>`,
+					displayIcon, tempClass, item.Tmp, item.Pop, formatTime(item.Time))
+      }
     }
+    fmt.Fprint(w, `</div></div>`)
+  }
 }
